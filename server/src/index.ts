@@ -55,7 +55,25 @@ app.get("/api/status", (_req, res) => {
     ai: Boolean(process.env.ANTHROPIC_API_KEY),
   });
 });
+const mcpHandler = toNodeHandler(
+  createMcpHandler(createMarketMcpServer)
+);
 
+app.all("/mcp", (req, res) => {
+  const secret = process.env.MCP_ACCESS_TOKEN;
+
+  if (!secret) {
+    res.status(503).json({ error: "MCP not configured" });
+    return;
+  }
+
+  if (req.headers.authorization !== `Bearer ${secret}`) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  void mcpHandler(req, res, req.body);
+});
 const PORT = Number(process.env.API_PORT ?? 4000);
 // Bind to localhost by default so cloning and running this never exposes an
 // unauthenticated-by-default API to the network. Set API_HOST=0.0.0.0 (and
